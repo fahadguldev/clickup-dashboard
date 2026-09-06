@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>testing dashboard</title>
+<style>
+  :root {
+    --bg: #0f1216;
+    --panel: #171c23;
+    --panel2: #1d232c;
+    --border: #262e3a;
+    --text: #e6ebf2;
+    --muted: #8b96a6;
+    --accent: #4f8ef7;
+    --green: #2ec27e;
+    --amber: #f6b73c;
+    --red: #f2545b;
+    --blue: #4f9cf7;
+    --purple: #8b7bf7;
+    --radius: 12px;
+    --shadow: 0 2px 8px rgba(0,0,0,.28);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(15,18,22,.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 18px; font-weight: 700; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  .head-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .status-pill {
+    font-size: 12px; color: var(--muted);
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 999px; display: flex; align-items: center; gap: 7px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  .dot.paused { background: var(--amber); animation: none; }
+  .dot.error { background: var(--red); animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  button {
+    font: inherit; font-size: 13px; font-weight: 600;
+    color: var(--text); background: var(--panel2); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  button:hover { background: #252d38; border-color: #33404f; }
+  button:disabled { opacity: .5; cursor: default; }
+  .tabs { display: flex; gap: 8px; padding: 14px 24px 0; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 10px 10px 0 0; }
+  .tab.active { background: var(--panel); border-color: var(--border); border-bottom-color: var(--panel); color: var(--accent); }
+  main { padding: 20px 24px 30px; max-width: 1600px; margin: 0 auto; }
+  #error-banner {
+    display: none; background: rgba(242,84,91,.1); border: 1px solid rgba(242,84,91,.4);
+    color: var(--red); border-radius: var(--radius); padding: 12px 16px; margin: 16px 24px 0;
+    font-size: 13px;
+  }
+  #loading { text-align: center; color: var(--muted); padding: 60px 0; font-size: 14px; }
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px; margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px; box-shadow: var(--shadow);
+  }
+  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat .value { font-size: 24px; font-weight: 800; margin-top: 5px; }
+  .value.green { color: var(--green); }
+  .value.accent { color: var(--accent); }
+  .value.amber { color: var(--amber); }
+  .value.red { color: var(--red); }
+  .value.blue { color: var(--blue); }
+  section { margin-bottom: 28px; }
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  h2 .count { background: var(--panel2); border: 1px solid var(--border); padding: 2px 9px; border-radius: 999px; font-size: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 15px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px;
+  }
+  .card .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .card h3 { font-size: 14px; font-weight: 700; line-height: 1.35; }
+  .card .sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+    background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
+  }
+  .badge.green { background: rgba(46,194,126,.12); border-color: rgba(46,194,126,.35); color: var(--green); }
+  .badge.amber { background: rgba(246,183,60,.12); border-color: rgba(246,183,60,.35); color: var(--amber); }
+  .badge.red { background: rgba(242,84,91,.12); border-color: rgba(242,84,91,.35); color: var(--red); }
+  .badge.blue { background: rgba(79,156,247,.12); border-color: rgba(79,156,247,.35); color: var(--blue); }
+  .badge.purple { background: rgba(139,123,247,.12); border-color: rgba(139,123,247,.35); color: var(--purple); }
+  .progress-wrap { display: flex; flex-direction: column; gap: 5px; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .progress-meta b { color: var(--text); }
+  .track { height: 8px; border-radius: 999px; background: var(--panel2); overflow: hidden; border: 1px solid var(--border); }
+  .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #6ea8ff); transition: width .6s ease; }
+  .fill.green { background: linear-gradient(90deg, var(--green), #4ae0a0); }
+  .fill.amber { background: linear-gradient(90deg, var(--amber), #ffd36e); }
+  .fill.red { background: linear-gradient(90deg, var(--red), #ff7d83); }
+  .attention { display: flex; flex-direction: column; gap: 8px; }
+  .attention-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; box-shadow: var(--shadow);
+  }
+  .attention-item .icon { font-size: 18px; line-height: 1.3; }
+  .attention-item .txt { flex: 1; min-width: 0; }
+  .attention-item .txt b { font-size: 13.5px; }
+  .attention-item .txt div { font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+  .attention-item .tag { flex-shrink: 0; align-self: center; }
+  .members { display: flex; flex-direction: column; gap: 10px; }
+  .member {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; box-shadow: var(--shadow);
+  }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #3a4657, #243040);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    font-weight: 700; font-size: 13px; border: 1px solid var(--border);
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .member-body { flex: 1; min-width: 0; }
+  .member-body h3 { font-size: 13.5px; }
+  .member-body .sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .member-right { text-align: right; flex-shrink: 0; }
+  .member-right .big { font-size: 16px; font-weight: 800; }
+  .member-right .lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .risk-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow);
+  }
+  .risk-row .l { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+  .risk-row .n { font-size: 14px; font-weight: 700; }
+  .risk-row .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .risk-row .r { flex-shrink: 0; font-size: 12px; display: flex; gap: 8px; align-items: center; }
+  .table-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: auto; box-shadow: var(--shadow);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid rgba(38,46,58,.5); vertical-align: middle; }
+  tr:hover td { background: rgba(79,142,247,.04); }
+  .clickable { cursor: pointer; }
+  .clickable:hover h3 { color: var(--accent); }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin: 0 3px 3px 0; background: var(--panel2); border: 1px solid var(--border); color: var(--muted); }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filters select, .filters input {
+    font: inherit; font-size: 12.5px; color: var(--text); background: var(--panel2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px;
+  }
+  .filters input { flex: 1; min-width: 160px; }
+  .back { margin-bottom: 12px; }
+  .delta-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .delta {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 11px 14px; font-size: 13px; box-shadow: var(--shadow); flex: 1; min-width: 200px;
+  }
+  .delta.up { border-left: 3px solid var(--green); }
+  .delta.warn { border-left: 3px solid var(--amber); }
+  .delta b { color: var(--text); }
+  .none { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  .sel { margin-bottom: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
+  .sel .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .sel .head h3 { font-size: 16px; }
+  footer { padding: 8px 24px 20px; color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>testing <span>dashboard</span></h1>
+    <div class="head-right">
+      <div class="status-pill"><span class="dot" id="dot"></span><span id="conn-status">starting…</span></div>
+      <div class="status-pill">refresh in <b id="countdown">60s</b></div>
+      <button id="refresh-btn">Refresh now</button>
+    </div>
+  </header>
+
+  <div id="error-banner"></div>
+  <div id="loading">Loading data from ClickUp...</div>
+
+  <div id="content" style="display:none">
+    <div class="tabs">
+      <button class="tab active" data-tab="ceo">CEO — Attention</button>
+      <button class="tab" data-tab="delivery">Delivery — Why</button>
+      <button class="tab" data-tab="ops">Operations — What</button>
+    </div>
+    <main>
+      <div id="view-ceo"></div>
+      <div id="view-delivery" style="display:none"></div>
+      <div id="view-ops" style="display:none"></div>
+    </main>
+  </div>
+
+  <footer>polls ClickUp API every 60 seconds · risk model: progress, overdue, staleness, workload</footer>
+
+<script>
+const API_TOKEN = "";
+const BASE = "https://api.clickup.com/api/v2";
+const REFRESH_MS = 60000;
+const RATE_SNAPSHOT_KEY = "ceo_dash_snapshot_v1";
+
+const $ = (id) => document.getElementById(id);
+const dot = $("dot"), connStatus = $("conn-status"), countdownEl = $("countdown");
+const errorBanner = $("error-banner"), content = $("content"), loading = $("loading");
+
+let timer = null;
+let secondsLeft = Math.round(REFRESH_MS / 1000);
+let state = null;
+let activeTab = "ceo";
+let selectedProjectKey = null;
+let filters = { space: "", project: "", member: "", status: "", q: "" };
+
+function setConn(kind, text) {
+  dot.className = "dot" + (kind === "paused" ? " paused" : kind === "error" ? " error" : "");
+  connStatus.textContent = text;
+}
+
+async function api(path, attempts = 3) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(BASE + path, {
+        headers: { "Authorization": API_TOKEN, "Content-Type": "application/json" }
+      });
+      if (res.status === 429) {
+        const delay = (i + 2) * 3000;
+        await new Promise(r => setTimeout(r, delay));
+        lastErr = new Error("rate limited");
+        continue;
+      }
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(res.status + " " + txt.slice(0, 200));
+      }
+      return await res.json();
+    } catch (e) {
+      lastErr = e;
+      await new Promise(r => setTimeout(r, 700 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
+function initials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+const DAY = 86400000;
+function dayKey(ms) { const d = new Date(ms); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+function fmtDate(ms) {
+  if (!ms) return "";
+  const d = new Date(Number(ms));
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+function healthOf(tooVal) {
+  if (tooVal === "critical") return { txt: "Critical", cls: "red", icon: "🔴" };
+  if (tooVal === "risk") return { txt: "At Risk", cls: "amber", icon: "🟡" };
+  if (tooVal === "track") return { txt: "On Track", cls: "green", icon: "🟢" };
+  return { txt: "Healthy", cls: "green", icon: "🟢" };
+}
+function projectHealth(p) {
+  if (p.total === 0) return "critical";
+  if (p.done === 0) return "critical";
+  if (p.overdue > 0 || p.stale >= 2 || (p.done / p.total) < 0.5) return "risk";
+  return "track";
+}
+function capacityOf(openCount) {
+  if (openCount === 0) return { txt: "Available", cls: "blue", icon: "🔵" };
+  if (openCount <= 4) return { txt: "Healthy", cls: "green", icon: "🟢" };
+  if (openCount <= 8) return { txt: "High workload", cls: "amber", icon: "🟡" };
+  return { txt: "Overloaded", cls: "red", icon: "🔴" };
+}
+
+function computeState(taskList, spaceNameById) {
+  const projects = new Map();
+  const members = new Map();
+
+  for (const t of taskList) {
+    const folderName = (t.folder && t.folder.name) || (t.project && t.project.name);
+    const listName = t.list && t.list.name;
+    const spaceId = t.space && t.space.id;
+    const spaceName = spaceNameById[spaceId] || (t.space && t.space.name) || "Unknown";
+    const key = (t.folder && t.folder.id) ? "folder:" + t.folder.id : "list:" + (t.list && t.list.id);
+
+    let p = projects.get(key);
+    if (!p) {
+      p = {
+        key,
+        name: folderName || listName || "Unnamed",
+        spaceName,
+        total: 0, done: 0, open: 0,
+        overdue: 0, dueSoon: 0, stale: 0, noProgress: false,
+        clients: new Set()
+      };
+      projects.set(key, p);
+    }
+    const closed = t.status && t.status.type === "closed";
+    const now = Date.now();
+    p.total++;
+    if (closed) p.done++; else p.open++;
+    if (!closed) {
+      if (t.due_date && Number(t.due_date) < now) p.overdue++;
+      if (t.due_date && Number(t.due_date) > now && Number(t.due_date) - now < 7 * DAY) p.dueSoon++;
+      if (!t.date_updated || (now - Number(t.date_updated) > 7 * DAY)) p.stale++;
+      else p.recent = true;
+    }
+
+    const assigned = (t.assignees || [])
+      .filter(a => a && a.username)
+      .map(a => a.username).sort().join("+");
+    if (assigned) p.clients.add(assigned);
+  }
+
+  const memberMap = new Map();
+  for (const t of taskList) {
+    const closed = t.status && t.status.type === "closed";
+    for (const a of (t.assignees || [])) {
+      if (!memberMap.has(a.id)) memberMap.set(a.id, {
+        id: a.id,
+        name: a.username || a.email || "Unknown",
+        email: a.email,
+        profilePicture: a.profilePicture,
+        total: 0, done: 0, open: 0
+      });
+      const m = memberMap.get(a.id);
+      m.total++;
+      closed ? m.done++ : m.open++;
+    }
+  }
+
+  const projArr = [...projects.values()].map(p => ({
+    ...p,
+    health: projectHealth(p),
+    progress: p.total === 0 ? 0 : Math.round((p.done / p.total) * 100)
+  }));
+  projArr.sort((a, b) => (a.health === b.health ? (b.total - a.total) : (a.health === "critical" ? -1 : b.health === "critical" ? 1 : a.health === "risk" ? -1 : 1)));
+
+  const memberArr = [...memberMap.values()].map(m => ({ ...m, capacity: capacityOf(m.open) }));
+  memberArr.sort((a, b) => (b.open - a.open));
+
+  const total = taskList.length;
+  const done = taskList.filter(t => t.status && t.status.type === "closed").length;
+  const progress = total === 0 ? 0 : Math.round((done / total) * 100);
+
+  const critical = projArr.filter(p => p.health === "critical").length;
+  const risk = projArr.filter(p => p.health === "risk").length;
+  const overloaded = memberArr.filter(m => m.capacity.txt === "Overloaded").length;
+
+  let overall = "track";
+  if (critical > 0) overall = "critical";
+  else if (risk > 0 || overloaded > 0) overall = "risk";
+
+  return {
+    taskList,
+    projArr,
+    memberArr,
+    total, done, open: total - done, progress,
+    criticalProjects: critical,
+    riskProjects: risk,
+    overloadedCount: overloaded,
+    overall
+  };
+}
+
+function buildProblems(s) {
+  const problems = [];
+
+  for (const p of s.projArr.filter(p => p.health === "critical")) {
+    problems.push({ sev: "critical", icon: "🔴", title: "Stalled project: " + p.name, body: (p.done === 0 ? "0 of " + p.total + " tasks done — no progress yet" : p.overdue + " overdue, " + p.open + " open of " + p.total) + " · " + p.spaceName, proj: p.key });
+  }
+  for (const p of s.projArr.filter(p => p.health === "risk")) {
+    problems.push({ sev: "risk", icon: "🟡", title: "At risk: " + p.name, body: (p.overdue > 0 ? p.overdue + " overdue · " : "") + p.done + "/" + p.total + " done (" + p.progress + "%)" + (p.stale >= 2 ? " · " + p.stale + " tasks stale" : "") + " · " + p.spaceName, proj: p.key });
+  }
+  for (const m of s.memberArr.filter(m => m.capacity.txt === "Overloaded")) {
+    problems.push({ sev: "risk", icon: "🔴", title: m.name + " is overloaded", body: m.open + " open tasks of " + m.total + " assigned — consider redistributing work.", member: m.id });
+  }
+  const overdueTasks = s.taskList.filter(t => t.status && t.status.type !== "closed" && t.due_date && Number(t.due_date) < Date.now());
+  const dueSoonTasks = s.taskList.filter(t => t.status && t.status.type !== "closed" && t.due_date && Number(t.due_date) > Date.now() && Number(t.due_date) - Date.now() < 7 * DAY);
+  if (overdueTasks.length > 0) {
+    problems.push({ sev: "risk", icon: "⏰", title: overdueTasks.length + " overdue task" + (overdueTasks.length > 1 ? "s" : ""), body: overdueTasks.slice(0, 4).map(t => esc(t.name)).join(" · "), proj: null });
+  }
+  if (dueSoonTasks.length > 0) {
+    problems.push({ sev: "risk", icon: "📅", title: dueSoonTasks.length + " deliverable" + (dueSoonTasks.length > 1 ? "s" : "") + " within 7 days", body: dueSoonTasks.slice(0, 4).map(t => esc(t.name)).join(" · "), proj: null });
+  }
+  const noActivity = s.taskList.filter(t => t.status && t.status.type !== "closed" && t.date_updated && (Date.now() - Number(t.date_updated) > 14 * DAY));
+  if (noActivity.length > 0) {
+    problems.push({ sev: "critical", icon: "🧊", title: noActivity.length + " task" + (noActivity.length > 1 ? "s" : "") + " untouched for 14+ days", body: noActivity.slice(0, 4).map(t => esc(t.name)).join(" · "), proj: null });
+  }
+
+  const sevRank = { critical: 0, risk: 1 };
+  problems.sort((a, b) => (sevRank[a.sev] - sevRank[b.sev]));
+  return problems.slice(0, 5);
+}
+
+function computeDeltas(prev, curr) {
+  const prevTasks = {};
+  for (const t of prev.taskList) prevTasks[t.id] = t;
+  const now = Date.now();
+  const idSet = {};
+  for (const t of curr.taskList) idSet[t.id] = t;
+
+  const completedSince = curr.taskList.filter(t => {
+    const p = prevTasks[t.id];
+    const closed = t.status && t.status.type === "closed";
+    return closed && p && !(p.status && p.status.type === "closed");
+  });
+  const newOverdue = curr.taskList.filter(t => {
+    const p = prevTasks[t.id];
+    const isOv = t.status && t.status.type !== "closed" && t.due_date && Number(t.due_date) < now;
+    if (isOv && !p) return true;
+    if (isOv && p && !(p.status && p.status.type === "closed")) {
+      if (!p.due_date) return true;
+      return Number(p.due_date) > now;
+    }
+    return false;
+  });
+
+  const improving = [];
+  const worsening = [];
+  const prevDone = {};
+  for (const p of prev.projArr) { prevDone[p.key] = p.done; }
+  for (const p of curr.projArr) {
+    const oldP = prevDone[p.key];
+    if (oldP === undefined) continue;
+    if (p.done > oldP) improving.push(p);
+    else if (p.done < oldP) worsening.push(p);
+  }
+
+  const prevWorkload = {};
+  for (const m of prev.memberArr) prevWorkload[m.id] = m.open;
+  const workloadChanges = curr.memberArr.filter(m => prevWorkload[m.id] !== undefined && prevWorkload[m.id] !== m.open)
+    .map(m => ({ name: m.name, from: prevWorkload[m.id], to: m.open }));
+
+  const fromYesterday = prev.dayKey !== dayKey(now);
+  return { completedSince, newOverdue, improving, worsening, workloadChanges, fromYesterday };
+}
+
+function loadSnapshot() {
+  try { return JSON.parse(localStorage.getItem(RATE_SNAPSHOT_KEY)) || null; } catch (e) { return null; }
+}
+function saveSnapshot(s) {
+  try { localStorage.setItem(RATE_SNAPSHOT_KEY, JSON.stringify(s)); } catch (e) { }
+}
+function popSnapshot() {
+  const prev = loadSnapshot();
+  if (prev) {
+    const s = { dayKey: prev.dayKey, taskList: prev.taskList, projArr: prev.projArr, memberArr: prev.memberArr };
+    return s;
+  }
+  return null;
+}
+
+async function loadDashboard() {
+  errorBanner.style.display = "none";
+  loading.style.display = "block";
+  content.style.display = "none";
+
+  try {
+    const teamData = await api("/team");
+    const team = teamData.teams[0];
+    const spaces = (await api(`/team/${team.id}/space`)).spaces || [];
+    const spaceNameById = {};
+    for (const s of spaces) spaceNameById[s.id] = s.name;
+
+    let taskList = [];
+    let page = 0;
+    let last = false;
+    while (!last && page < 20) {
+      const data = await api(`/team/${team.id}/task?include_closed=true&subtasks=false&page=${page}`);
+      taskList.push(...data.tasks);
+      last = data.last_page === true || data.tasks.length < 100 || data.tasks.length === 0;
+      page++;
+    }
+
+    const fresh = computeState(taskList, spaceNameById);
+    const prev = popSnapshot();
+    fresh.deltas = prev ? computeDeltas(prev, fresh) : null;
+    fresh.problems = buildProblems(fresh);
+    const snap = {
+      dayKey: dayKey(Date.now()),
+      taskList,
+      projArr: fresh.projArr,
+      memberArr: fresh.memberArr
+    };
+    saveSnapshot(snap);
+
+    state = fresh;
+    selectedProjectKey = null;
+    filters = { space: "", project: "", member: "", status: "", q: "" };
+
+    renderAll();
+
+    loading.style.display = "none";
+    content.style.display = "block";
+    setConn("ok", "live");
+  } catch (e) {
+    loading.style.display = "none";
+    errorBanner.textContent = "Failed to load: " + e.message + " — will retry automatically.";
+    errorBanner.style.display = "block";
+    setConn("error", "error");
+  }
+}
+
+function renderAll() {
+  if (!state) return;
+  renderCEO();
+  renderDelivery();
+  renderOps();
+}
+
+function renderCEO() {
+  const s = state;
+  const h = healthOf(s.overall);
+
+  let stats = `
+    <div class="stats">
+      <div class="stat"><div class="label">Overall status</div><div class="value">${h.icon}</div></div>
+      <div class="stat"><div class="label">Overall progress</div><div class="value">${s.progress}%</div></div>
+      <div class="stat"><div class="label">Projects at risk / critical</div><div class="value ${s.criticalProjects > 0 ? "red" : "amber"}">${s.riskProjects} / ${s.criticalProjects}</div></div>
+      <div class="stat"><div class="label">Overloaded members</div><div class="value red">${s.overloadedCount}</div></div>
+      <div class="stat"><div class="label">Open tasks</div><div class="value amber">${s.open}</div></div>
+      <div class="stat"><div class="label">Completed</div><div class="value green">${s.done}</div></div>
+      <div class="stat"><div class="label">Total tasks</div><div class="value accent">${s.total}</div></div>
+    </div>`;
+
+  let attention = "";
+  if (s.problems.length === 0) {
+    attention = `<div class="none">Nothing requires attention right now.</div>`;
+  } else {
+    attention = `<div class="attention">` + s.problems.map(p => `
+      <div class="attention-item">
+        <div class="icon">${p.icon}</div>
+        <div class="txt"><b>${esc(p.title)}</b><div>${p.body}</div></div>
+        <div class="tag"><span class="badge ${p.sev === "critical" ? "red" : "amber"}">${p.sev === "critical" ? "Critical" : "Watch"}</span></div>
+      </div>`).join("") + `</div>`;
+  }
+
+  let changes;
+  if (s.deltas) {
+    const d = s.deltas;
+    const label = d.fromYesterday ? "since yesterday" : "since last check";
+    changes = `<div class="delta-row">
+      <div class="delta up"><b>${d.completedSince.length}</b> task${d.completedSince.length === 1 ? "" : "s"} completed ${label}</div>
+      <div class="delta ${d.newOverdue.length > 0 ? "warn" : "up"}"><b>${d.newOverdue.length}</b> new overdue ${label}</div>
+      <div class="delta up"><b>${d.improving.length}</b> project${d.improving.length === 1 ? "" : "s"} improved · <b>${d.worsening.length}</b> worsened</div>
+      <div class="delta ${d.workloadChanges.length > 0 ? "warn" : "up"}"><b>${d.workloadChanges.length}</b> workload change${d.workloadChanges.length === 1 ? "" : "s"} ${label}</div>
+    </div>`;
+  } else {
+    changes = `<div class="none">No baseline yet — deltas will appear after the next refresh.</div>`;
+  }
+
+  let projCards = s.projArr.map(p => {
+    const hp = healthOf(p.health);
+    const fillCls = hp.cls === "red" ? "fill red" : hp.cls === "amber" ? "fill amber" : "fill green";
+    return `
+      <div class="card clickable" onclick="goProject('${esc(p.key)}')">
+        <div class="top">
+          <div><h3>${esc(p.name)}</h3><div class="sub">${esc(p.spaceName)}</div></div>
+          <span class="badge ${hp.cls}">${hp.icon} ${hp.txt}</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-meta"><span><b>${p.done}</b>/${p.total} done ${p.overdue > 0 ? "· " + p.overdue + " ⏰" : ""}</span><span><b>${p.progress}%</b></span></div>
+          <div class="track"><div class="${fillCls}" style="width:${p.progress}%"></div></div>
+        </div>
+      </div>`;
+  }).join("");
+
+  let membersList = s.memberArr.length === 0 ? `<div class="none">No tasks assigned yet.</div>` : s.memberArr.map(m => `
+    <div class="member">
+      <div class="avatar">${m.profilePicture ? `<img src="${esc(m.profilePicture)}" alt="">` : esc(initials(m.name))}</div>
+      <div class="member-body"><h3>${esc(m.name)}</h3><div class="sub">${m.open} open of ${m.total} tasks</div></div>
+      <div class="member-right"><span class="badge ${m.capacity.cls}">${m.capacity.icon} ${m.capacity.txt}</span></div>
+    </div>`).join("");
+
+  let risks;
+  const overdue = s.taskList.filter(t => t.status && t.status.type !== "closed" && t.due_date && Number(t.due_date) < Date.now());
+  const dueSoon = s.taskList.filter(t => t.status && t.status.type !== "closed" && t.due_date && Number(t.due_date) > Date.now() && Number(t.due_date) - Date.now() < 7 * DAY);
+  const untouched = s.taskList.filter(t => t.status && t.status.type !== "closed" && t.date_updated && (Date.now() - Number(t.date_updated) > 14 * DAY));
+  const zeroProgress = s.projArr.filter(p => p.total > 0 && p.done === 0);
+  const riskRows = [];
+  if (overdue.length) riskRows.push({ icon: "⏰", title: overdue.length + " overdue tasks", sub: overdue.slice(0, 3).map(t => esc(t.name)).join(" · ") + (overdue.length > 3 ? " …" : ""), cls: "red" });
+  if (dueSoon.length) riskRows.push({ icon: "📅", title: dueSoon.length + " due within 7 days", sub: dueSoon.slice(0, 3).map(t => esc(t.name)).join(" · ") + (dueSoon.length > 3 ? " …" : ""), cls: "amber" });
+  if (untouched.length) riskRows.push({ icon: "🧊", title: untouched.length + " tasks stagnant 14+ days", sub: untouched.slice(0, 3).map(t => esc(t.name)).join(" · ") + (untouched.length > 3 ? " …" : ""), cls: "red" });
+  if (zeroProgress.length) riskRows.push({ icon: "🚫", title: zeroProgress.length + " projects with no progress", sub: zeroProgress.slice(0, 3).map(p => esc(p.name)).join(" · ") + (zeroProgress.length > 3 ? " …" : ""), cls: "red" });
+  risks = riskRows.length === 0 ? `<div class="none">No delivery risks detected.</div>` : riskRows.map(r => `
+    <div class="risk-row">
+      <div class="l"><span style="font-size:16px">${r.icon}</span><div><div class="n">${r.title}</div><div class="s">${r.sub}</div></div></div>
+      <div class="r"><span class="badge ${r.cls}">${r.cls === "red" ? "Critical" : "Watch"}</span></div>
+    </div>`).join("");
+
+  const clientMap = new Map();
+  for (const p of s.projArr) {
+    const cname = p.spaceName;
+    if (!clientMap.has(cname)) clientMap.set(cname, { name: cname, total: 0, done: 0, overdue: 0, critical: 0, risk: 0 });
+    const c = clientMap.get(cname);
+    c.total += p.total; c.done += p.done; c.overdue += p.overdue;
+    if (p.health === "critical") c.critical++;
+    if (p.health === "risk") c.risk++;
+  }
+  let clients = "";
+  if (clientMap.size === 0) {
+    clients = `<div class="none">No client data yet.</div>`;
+  } else {
+    clients = `<div class="grid">` + [...clientMap.entries()].map(([k, c]) => {
+      const pr = c.total === 0 ? 0 : Math.round((c.done / c.total) * 100);
+      const h = c.critical > 0 ? healthOf("critical") : c.risk > 0 ? healthOf("risk") : healthOf("track");
+      return `
+        <div class="card">
+          <div class="top"><h3>${esc(c.name)}</h3><span class="badge ${h.cls}">${h.icon} ${h.txt}</span></div>
+          <div class="progress-wrap">
+            <div class="progress-meta"><span>${c.done}/${c.total} done · ${c.overdue} ⏰</span><span>${pr}%</span></div>
+            <div class="track"><div class="fill ${h.cls === "red" ? "red" : h.cls === "amber" ? "amber" : "green"}" style="width:${pr}%"></div></div>
+          </div>
+          ${c.critical > 0 || c.risk > 0 ? `<div class="sub">${c.critical} critical · ${c.risk} at-risk project(s)</div>` : ""}
+        </div>`;
+    }).join("") + `</div>`;
+  }
+
+  $("view-ceo").innerHTML = `
+    <div class="stats-wrap">${stats}</div>
+    <section><h2>CEO attention required <span class="count">${s.problems.length}</span></h2>${attention}</section>
+    <section><h2>Project health <span class="count">${s.projArr.length}</span></h2>${s.projArr.length === 0 ? `<div class="none">No projects found.</div>` : `<div class="grid">${projCards}</div>`}</section>
+    <section><h2>Team capacity <span class="count">${s.memberArr.length}</span></h2>${membersList}</section>
+    <section><h2>Delivery risks</h2>${risks}</section>
+    <section><h2>Client health</h2>${clients}</section>
+    <section><h2>What's changed</h2>${changes}</section>`;
+}
+
+function renderDelivery() {
+  const s = state;
+  if (!s) return;
+  const projRows = s.projArr.map(p => {
+    const hp = healthOf(p.health);
+    return `
+      <div class="risk-row clickable" onclick="goProject('${esc(p.key)}')">
+        <div class="l">
+          <span style="font-size:16px">${hp.icon}</span>
+          <div><div class="n">${esc(p.name)}</div>
+            <div class="s">${esc(p.spaceName)} · ${p.done}/${p.total} done · ${p.progress}% progress · ${p.overdue} overdue · ${p.dueSoon} due soon · ${p.stale} stale</div>
+          </div>
+        </div>
+        <div class="r"><span class="badge ${hp.cls}">${hp.txt}</span></div>
+      </div>`;
+  }).join("");
+
+  $("view-delivery").innerHTML = `
+    <section><h2>Projects — why is it happening? <span class="count">${s.projArr.length}</span></h2>${s.projArr.length === 0 ? `<div class="none">No projects found.</div>` : projRows}</section>`;
+}
+
+function renderOps() {
+  const s = state;
+  if (!s) return;
+
+  const spaces = [...new Set(s.projArr.map(p => p.spaceName))].sort();
+  const projects = [...new Set(s.projArr.map(p => p.name))].sort();
+  const members = s.memberArr.map(m => m.name).sort();
+  const statuses = [...new Set(s.taskList.map(t => t.status && t.status.status).filter(Boolean))].sort();
+
+  let tasks = s.taskList;
+  if (filters.space) tasks = tasks.filter(t => spaceNameById(t) === filters.space);
+  if (filters.project) tasks = tasks.filter(t => bucketName(t) === filters.project);
+  if (filters.member) tasks = tasks.filter(t => (t.assignees || []).some(a => a.username === filters.member));
+  if (filters.status) tasks = tasks.filter(t => (t.status && t.status.status) === filters.status);
+  if (filters.q) { const q = filters.q.toLowerCase(); tasks = tasks.filter(t => (t.name || "").toLowerCase().includes(q)); }
+
+  const rows = tasks.slice(0, 300).map(t => {
+    const closed = t.status && t.status.type === "closed";
+    const overdue = !closed && t.due_date && Number(t.due_date) < Date.now();
+    const st = (t.status && t.status.status) || "";
+    const who = (t.assignees || []).map(a => esc(a.username || a.email)).join(", ") || "—";
+    return `
+      <tr>
+        <td>${closed ? "✅" : overdue ? "⏰" : "⬜"}</td>
+        <td><a href="${esc(t.url || "#")}" target="_blank" style="color:var(--accent);text-decoration:none">${esc(t.name)}</a></td>
+        <td>${esc(bucketName(t))}</td>
+        <td>${esc((t.space && spaceNameById(t)) || "")}</td>
+        <td>${esc(st)}</td>
+        <td>${who}</td>
+        <td>${esc(fmtDate(t.due_date))}${overdue ? ' <span class="badge red">late</span>' : ""}</td>
+      </tr>`;
+  }).join("");
+
+  $("view-ops").innerHTML = `
+    <div class="filters">
+      <select id="f-space"><option value="">All spaces</option>${spaces.map(x => `<option ${filters.space === x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+      <select id="f-project"><option value="">All projects</option>${projects.map(x => `<option ${filters.project === x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+      <select id="f-member"><option value="">All members</option>${members.map(x => `<option ${filters.member === x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+      <select id="f-status"><option value="">All statuses</option>${statuses.map(x => `<option ${filters.status === x ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+      <input id="f-q" placeholder="Search tasks…" value="${esc(filters.q)}">
+    </div>
+    <div class="table-card"><table>
+      <thead><tr><th></th><th>Task</th><th>Project</th><th>Space</th><th>Status</th><th>Assignees</th><th>Due</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="7" style="color:var(--muted)">No tasks match.</td></tr>`}</tbody>
+    </table></div>
+    <p style="color:var(--muted);font-size:12px;margin-top:8px">Showing ${Math.min(tasks.length, 300)} of ${tasks.length} matching tasks · ${s.total} tasks total</p>`;
+
+  $("f-space").onchange = e => { filters.space = e.target.value; renderOps(); };
+  $("f-project").onchange = e => { filters.project = e.target.value; renderOps(); };
+  $("f-member").onchange = e => { filters.member = e.target.value; renderOps(); };
+  $("f-status").onchange = e => { filters.status = e.target.value; renderOps(); };
+  const qInput = $("f-q");
+  qInput.oninput = e => {
+    filters.q = e.target.value;
+    const selStart = e.target.selectionStart;
+    renderOps();
+    const el = $("f-q");
+    el.focus();
+    el.setSelectionRange(selStart, selStart);
+  };
+}
+
+function spaceNameById(t) {
+  if (!state) return "";
+  const sid = t.space && t.space.id;
+  const p = state.projArr.find(x => x.key === (t.folder && t.folder.id ? "folder:" + t.folder.id : "list:" + (t.list && t.list.id)));
+  return p ? p.spaceName : "";
+}
+function bucketName(t) {
+  const folderName = (t.folder && t.folder.name) || (t.project && t.project.name);
+  const listName = t.list && t.list.name;
+  return folderName || listName || "Unnamed";
+}
+
+function goProject(key) {
+  selectedProjectKey = key;
+  showTab("delivery");
+  const s = state;
+  const p = s.projArr.find(x => x.key === key);
+  if (!p) return;
+  const hp = healthOf(p.health);
+  const tasks = s.taskList.filter(t => (t.folder && t.folder.id ? "folder:" + t.folder.id : "list:" + (t.list && t.list.id)) === key);
+  const rows = tasks.map(t => {
+    const closed = t.status && t.status.type === "closed";
+    const overdue = !closed && t.due_date && Number(t.due_date) < Date.now();
+    const who = (t.assignees || []).map(a => esc(a.username || a.email)).join(", ") || "—";
+    return `<tr>
+      <td>${closed ? "✅" : overdue ? "⏰" : "⬜"}</td>
+      <td><a href="${esc(t.url || "#")}" target="_blank" style="color:var(--accent);text-decoration:none">${esc(t.name)}</a></td>
+      <td>${esc((t.status && t.status.status) || "")}</td>
+      <td>${who}</td>
+      <td>${esc(fmtDate(t.due_date))}${overdue ? ' <span class="badge red">late</span>' : ""}</td>
+    </tr>`;
+  }).join("");
+  $("view-delivery").innerHTML = `
+    <div class="back"><button onclick="goBack()">← All projects</button></div>
+    <div class="sel">
+      <div class="head">
+        <div><h3>${hp.icon} ${esc(p.name)}</h3>
+        <div class="sub">${esc(p.spaceName)} · ${p.done}/${p.total} done (${p.progress}%) · ${p.overdue} overdue · ${p.dueSoon} due soon · ${p.stale} stale</div></div>
+        <span class="badge ${hp.cls}">${hp.txt}</span>
+      </div>
+      <div class="table-card"><table>
+        <thead><tr><th></th><th>Task</th><th>Status</th><th>Assignees</th><th>Due</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5" style="color:var(--muted)">No tasks.</td></tr>`}</tbody>
+      </table></div>
+    </div>`;
+}
+
+function goBack() {
+  selectedProjectKey = null;
+  showTab("delivery");
+  renderDelivery();
+}
+
+function showTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  $("view-ceo").style.display = tab === "ceo" ? "" : "none";
+  $("view-delivery").style.display = tab === "delivery" ? "" : "none";
+  $("view-ops").style.display = tab === "ops" ? "" : "none";
+}
+
+document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+async function refreshLoop() {
+  await loadDashboard();
+  secondsLeft = Math.round(REFRESH_MS / 1000);
+  countdownEl.textContent = secondsLeft + "s";
+  clearInterval(timer);
+  timer = setInterval(() => {
+    secondsLeft--;
+    countdownEl.textContent = (secondsLeft < 0 ? 0 : secondsLeft) + "s";
+    if (secondsLeft <= 0) {
+      setConn("ok", "refreshing…");
+      refreshLoop();
+    }
+  }, 1000);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    clearInterval(timer);
+    setConn("paused", "paused (tab hidden)");
+  } else {
+    countdownEl.textContent = "…";
+    refreshLoop();
+  }
+});
+
+$("refresh-btn").addEventListener("click", () => {
+  $("refresh-btn").disabled = true;
+  setConn("ok", "refreshing…");
+  refreshLoop().finally(() => { $("refresh-btn").disabled = false; });
+});
+
+refreshLoop();
+</script>
+</body>
+</html>
