@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { DashboardFooter } from "@/components/dashboard/footer";
-import { CEOTab } from "@/components/dashboard/ceo-tab";
-import { DeliveryTab } from "@/components/dashboard/delivery-tab";
-import { OperationsTab } from "@/components/dashboard/operations-tab";
+import { StatsGrid } from "@/components/dashboard/stats-grid";
+import { ProjectCards } from "@/components/dashboard/project-cards";
+import { TeamCapacity } from "@/components/dashboard/team-capacity";
 import { getMockTasks } from "@/lib/mock-data";
 import { computeState } from "@/lib/compute";
 import { DashboardState, Task } from "@/lib/types";
@@ -46,8 +46,6 @@ function mapClickUpTask(raw: Record<string, unknown>): Task {
 
 export default function DashboardPage() {
   const [state, setState] = useState<DashboardState | null>(null);
-  const [activeTab, setActiveTab] = useState<"ceo" | "delivery" | "ops">("ceo");
-  const [selectedProjectKey, setSelectedProjectKey] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(REFRESH_SECONDS);
   const [status, setStatus] = useState<"ok" | "paused" | "error">("ok");
   const [statusText, setStatusText] = useState("loading...");
@@ -79,13 +77,12 @@ export default function DashboardPage() {
       setStatus("error");
       setStatusText("error — using mock data");
 
-      // Fallback to mock data if API fails
       try {
         const tasks = getMockTasks();
         const computed = computeState(tasks);
         setState(computed);
       } catch {
-        // mock also failed, state stays null
+        // mock also failed
       }
     } finally {
       setRefreshing(false);
@@ -127,52 +124,17 @@ export default function DashboardPage() {
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [loadData]);
 
-  const handleRefresh = () => {
-    loadData();
-  };
-
-  const handleSelectProject = (key: string) => {
-    setSelectedProjectKey(key);
-    setActiveTab("delivery");
-  };
-
-  const handleBack = () => {
-    setSelectedProjectKey(null);
-  };
-
-  const tabs = [
-    { key: "ceo" as const, label: "CEO — Attention" },
-    { key: "delivery" as const, label: "Delivery — Why" },
-    { key: "ops" as const, label: "Operations — What" },
-  ];
-
   return (
     <div className="min-h-screen flex flex-col">
       <DashboardHeader
         secondsLeft={secondsLeft}
         status={status}
         statusText={statusText}
-        onRefresh={handleRefresh}
+        onRefresh={loadData}
         refreshing={refreshing}
       />
 
-      <div className="flex gap-2 px-6 pt-4 max-w-[1600px] mx-auto w-full">
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => { setActiveTab(tab.key); setSelectedProjectKey(null); }}
-            className={`px-4 py-2 rounded-t-lg text-sm font-semibold border border-b-0 transition-colors ${
-              activeTab === tab.key
-                ? "bg-card border-border text-primary"
-                : "bg-transparent border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <main className="flex-1 px-6 py-5 max-w-[1600px] mx-auto w-full">
+      <main className="flex-1 px-6 py-6 max-w-[1600px] mx-auto w-full">
         {error && (
           <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             API Error: {error} — showing mock data as fallback.
@@ -182,21 +144,9 @@ export default function DashboardPage() {
           <div className="text-center text-muted-foreground py-16">Loading data from ClickUp...</div>
         ) : (
           <>
-            {activeTab === "ceo" && (
-              <CEOTab state={state} onSelectProject={handleSelectProject} />
-            )}
-            {activeTab === "delivery" && (
-              <DeliveryTab
-                projects={state.projects}
-                tasks={state.tasks}
-                selectedProjectKey={selectedProjectKey}
-                onSelectProject={handleSelectProject}
-                onBack={handleBack}
-              />
-            )}
-            {activeTab === "ops" && (
-              <OperationsTab tasks={state.tasks} />
-            )}
+            <StatsGrid state={state} />
+            <ProjectCards projects={state.projects} tasks={state.tasks} />
+            <TeamCapacity members={state.members} tasks={state.tasks} />
           </>
         )}
       </main>
