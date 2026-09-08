@@ -59,7 +59,7 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/clickup");
+      const res = await fetch("/api/clickup", { cache: "no-store" });
       const data = await res.json();
 
       if (!res.ok || data.error) {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const BASE = "https://api.clickup.com/api/v2";
 
 async function api(path: string, token: string, attempts = 3): Promise<unknown> {
@@ -7,6 +9,7 @@ async function api(path: string, token: string, attempts = 3): Promise<unknown> 
   for (let i = 0; i < attempts; i++) {
     try {
       const res = await fetch(BASE + path, {
+        cache: "no-store",
         headers: { Authorization: token, "Content-Type": "application/json" },
       });
       if (res.status === 429) {
