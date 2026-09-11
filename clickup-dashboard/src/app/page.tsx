@@ -12,13 +12,16 @@ import { DashboardState, Task } from "@/lib/types";
 
 const REFRESH_SECONDS = 60;
 
-function mapClickUpTask(raw: Record<string, unknown>): Task {
+function mapClickUpTask(raw: Record<string, unknown>, spaceNameById: Record<string, string>): Task {
   const status = raw.status as { status?: string; type?: string; color?: string } | undefined;
   const folder = raw.folder as { id?: string; name?: string } | undefined;
   const project = raw.project as { id?: string; name?: string } | undefined;
   const list = raw.list as { id?: string; name?: string } | undefined;
   const space = raw.space as { id?: string; name?: string } | undefined;
   const assignees = (raw.assignees as { id?: number; username?: string; email?: string; profilePicture?: string | null }[] || []);
+
+  const spaceId = space?.id ?? "";
+  const spaceName = space?.name || spaceNameById[spaceId] || "Unknown";
 
   return {
     id: String(raw.id ?? ""),
@@ -40,7 +43,7 @@ function mapClickUpTask(raw: Record<string, unknown>): Task {
     folder: folder?.id ? { id: folder.id, name: folder.name ?? "" } : null,
     project: project?.id ? { id: project.id, name: project.name ?? "" } : null,
     list: list?.id ? { id: list.id, name: list.name ?? "" } : null,
-    space: space?.id ? { id: space.id, name: space.name ?? "" } : null,
+    space: spaceId ? { id: spaceId, name: spaceName } : null,
   };
 }
 
@@ -51,6 +54,9 @@ export default function DashboardPage() {
   const [statusText, setStatusText] = useState("loading...");
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [spaceFilter, setSpaceFilter] = useState("");
+  const [folderFilter, setFolderFilter] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadData = useCallback(async () => {
@@ -66,7 +72,8 @@ export default function DashboardPage() {
         throw new Error(data.error || `HTTP ${res.status}`);
       }
 
-      const tasks: Task[] = (data.tasks as Record<string, unknown>[]).map(mapClickUpTask);
+      const spaceNameById = (data.spaceNameById ?? {}) as Record<string, string>;
+      const tasks: Task[] = (data.tasks as Record<string, unknown>[]).map(t => mapClickUpTask(t, spaceNameById));
       const computed = computeState(tasks);
       setState(computed);
       setStatus("ok");
@@ -90,24 +97,16 @@ export default function DashboardPage() {
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setSecondsLeft(prev => {
-        if (prev <= 1) {
-          loadData();
-          return REFRESH_SECONDS;
-        }
+        if (prev <= 1) { loadData(); return REFRESH_SECONDS; }
         return prev - 1;
       });
     }, 1000);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [loadData]);
 
   useEffect(() => {
@@ -116,13 +115,41 @@ export default function DashboardPage() {
         if (timerRef.current) clearInterval(timerRef.current);
         setStatus("paused");
         setStatusText("paused (tab hidden)");
-      } else {
-        loadData();
-      }
+      } else { loadData(); }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [loadData]);
+
+  const filteredProjects = state?.projects.filter(p => {
+    if (spaceFilter && p.spaceName !== spaceFilter) return false;
+    if (folderFilter && p.folderName !== folderFilter) return false;
+    return true;
+  }) ?? [];
+
+  const availableFolders = state?.projects
+    .filter(p => !spaceFilter || p.spaceName === spaceFilter)
+    .map(p => p.folderName)
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .sort() ?? [];
+
+  const filteredMembers = state?.members.filter(m => {
+    if (memberSearch) {
+      const q = memberSearch.toLowerCase();
+      if (!m.name.toLowerCase().includes(q) && !m.email.toLowerCase().includes(q)) return false;
+    }
+    if (spaceFilter || folderFilter) {
+      const hasMatchingProject = Array.from(m.projectKeys).some(key => {
+        const proj = state?.projects.find(p => p.key === key);
+        if (!proj) return false;
+        if (spaceFilter && proj.spaceName !== spaceFilter) return false;
+        if (folderFilter && proj.folderName !== folderFilter) return false;
+        return true;
+      });
+      if (!hasMatchingProject) return false;
+    }
+    return true;
+  }) ?? [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -145,8 +172,25 @@ export default function DashboardPage() {
         ) : (
           <>
             <StatsGrid state={state} />
-            <ProjectCards projects={state.projects} tasks={state.tasks} />
-            <TeamCapacity members={state.members} tasks={state.tasks} />
+
+            <ProjectCards
+              projects={filteredProjects}
+              tasks={state.tasks}
+              spaces={state.spaces}
+              availableFolders={availableFolders}
+              spaceFilter={spaceFilter}
+              folderFilter={folderFilter}
+              onSpaceFilter={setSpaceFilter}
+              onFolderFilter={setFolderFilter}
+            />
+
+            <TeamCapacity
+              members={filteredMembers}
+              tasks={state.tasks}
+              projects={state.projects}
+              memberSearch={memberSearch}
+              onMemberSearch={setMemberSearch}
+            />
           </>
         )}
       </main>

@@ -25,13 +25,13 @@ const folders = [
 ];
 
 const members: Member[] = [
-  { id: 1, name: "Alex Chen", email: "alex@example.com", profilePicture: null, total: 14, done: 5, open: 9, capacity: { txt: "Overloaded", cls: "destructive" } },
-  { id: 2, name: "Sarah Kim", email: "sarah@example.com", profilePicture: null, total: 11, done: 7, open: 4, capacity: { txt: "Healthy", cls: "success" } },
-  { id: 3, name: "Marcus Johnson", email: "marcus@example.com", profilePicture: null, total: 9, done: 3, open: 6, capacity: { txt: "High workload", cls: "warning" } },
-  { id: 4, name: "Priya Patel", email: "priya@example.com", profilePicture: null, total: 12, done: 8, open: 4, capacity: { txt: "Healthy", cls: "success" } },
-  { id: 5, name: "James Wilson", email: "james@example.com", profilePicture: null, total: 7, done: 2, open: 5, capacity: { txt: "High workload", cls: "warning" } },
-  { id: 6, name: "Emma Davis", email: "emma@example.com", profilePicture: null, total: 5, done: 5, open: 0, capacity: { txt: "Available", cls: "secondary" } },
-  { id: 7, name: "Liam Brown", email: "liam@example.com", profilePicture: null, total: 8, done: 1, open: 7, capacity: { txt: "Overloaded", cls: "destructive" } },
+  { id: 1, name: "Alex Chen", email: "alex@example.com", profilePicture: null, total: 14, done: 5, open: 9, capacity: { txt: "Overloaded", cls: "destructive" }, projectKeys: new Set() },
+  { id: 2, name: "Sarah Kim", email: "sarah@example.com", profilePicture: null, total: 11, done: 7, open: 4, capacity: { txt: "Healthy", cls: "success" }, projectKeys: new Set() },
+  { id: 3, name: "Marcus Johnson", email: "marcus@example.com", profilePicture: null, total: 9, done: 3, open: 6, capacity: { txt: "High workload", cls: "warning" }, projectKeys: new Set() },
+  { id: 4, name: "Priya Patel", email: "priya@example.com", profilePicture: null, total: 12, done: 8, open: 4, capacity: { txt: "Healthy", cls: "success" }, projectKeys: new Set() },
+  { id: 5, name: "James Wilson", email: "james@example.com", profilePicture: null, total: 7, done: 2, open: 5, capacity: { txt: "High workload", cls: "warning" }, projectKeys: new Set() },
+  { id: 6, name: "Emma Davis", email: "emma@example.com", profilePicture: null, total: 5, done: 5, open: 0, capacity: { txt: "Available", cls: "secondary" }, projectKeys: new Set() },
+  { id: 7, name: "Liam Brown", email: "liam@example.com", profilePicture: null, total: 8, done: 1, open: 7, capacity: { txt: "Overloaded", cls: "destructive" }, projectKeys: new Set() },
 ];
 
 function generateTasks(): Task[] {

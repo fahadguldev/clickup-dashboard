@@ -1,5 +1,4 @@
 export type HealthStatus = "critical" | "risk" | "track";
-export type CapacityStatus = "available" | "healthy" | "high" | "overloaded";
 
 export interface Assignee {
   id: number;
@@ -31,15 +30,15 @@ export interface Task {
 export interface Project {
   key: string;
   name: string;
+  folderName: string;
   spaceName: string;
   total: number;
   done: number;
   open: number;
   overdue: number;
-  dueSoon: number;
-  stale: number;
   health: HealthStatus;
   progress: number;
+  assigneeIds: Set<number>;
 }
 
 export interface Member {
@@ -51,35 +50,21 @@ export interface Member {
   done: number;
   open: number;
   capacity: { txt: string; cls: string };
-}
-
-export interface Problem {
-  sev: "critical" | "risk";
-  icon: string;
-  title: string;
-  body: string;
-  type: "project" | "member" | "tasks";
+  projectKeys: Set<string>;
 }
 
 export interface DashboardState {
   tasks: Task[];
   projects: Project[];
   members: Member[];
-  problems: Problem[];
   total: number;
   done: number;
   open: number;
   progress: number;
+  spaces: string[];
+  folders: string[];
   criticalProjects: number;
   riskProjects: number;
   overloadedCount: number;
   overall: HealthStatus;
-}
-
-export interface Filters {
-  space: string;
-  project: string;
-  member: string;
-  status: string;
-  q: string;
 }
