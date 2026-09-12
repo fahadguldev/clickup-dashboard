@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { ChevronRight } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { DashboardFooter } from "@/components/dashboard/footer";
 import { StatsGrid } from "@/components/dashboard/stats-grid";
+import { SpaceCards } from "@/components/dashboard/space-cards";
+import { FolderCards } from "@/components/dashboard/folder-cards";
 import { ProjectCards } from "@/components/dashboard/project-cards";
 import { TeamCapacity } from "@/components/dashboard/team-capacity";
 import { getMockTasks } from "@/lib/mock-data";
@@ -54,8 +57,8 @@ export default function DashboardPage() {
   const [statusText, setStatusText] = useState("loading...");
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [spaceFilter, setSpaceFilter] = useState("");
-  const [folderFilter, setFolderFilter] = useState("");
+  const [selectedSpace, setSelectedSpace] = useState<string | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -65,7 +68,7 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/clickup");
+      const res = await fetch("/api/clickup", { cache: "no-store" });
       const data = await res.json();
 
       if (!res.ok || data.error) {
@@ -121,35 +124,61 @@ export default function DashboardPage() {
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [loadData]);
 
-  const filteredProjects = state?.projects.filter(p => {
-    if (spaceFilter && p.spaceName !== spaceFilter) return false;
-    if (folderFilter && p.folderName !== folderFilter) return false;
-    return true;
-  }) ?? [];
+  const availableFolders = useMemo(() => {
+    if (!selectedSpace || !state) return [];
+    return state.projects
+      .filter(p => p.spaceName === selectedSpace)
+      .map(p => p.folderName)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .sort();
+  }, [state, selectedSpace]);
 
-  const availableFolders = state?.projects
-    .filter(p => !spaceFilter || p.spaceName === spaceFilter)
-    .map(p => p.folderName)
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .sort() ?? [];
+  const filteredProjects = useMemo(() => {
+    if (!state) return [];
+    return state.projects.filter(p => {
+      if (selectedSpace && p.spaceName !== selectedSpace) return false;
+      if (selectedFolder && p.folderName !== selectedFolder) return false;
+      return true;
+    });
+  }, [state, selectedSpace, selectedFolder]);
 
-  const filteredMembers = state?.members.filter(m => {
-    if (memberSearch) {
-      const q = memberSearch.toLowerCase();
-      if (!m.name.toLowerCase().includes(q) && !m.email.toLowerCase().includes(q)) return false;
-    }
-    if (spaceFilter || folderFilter) {
-      const hasMatchingProject = Array.from(m.projectKeys).some(key => {
-        const proj = state?.projects.find(p => p.key === key);
-        if (!proj) return false;
-        if (spaceFilter && proj.spaceName !== spaceFilter) return false;
-        if (folderFilter && proj.folderName !== folderFilter) return false;
-        return true;
-      });
-      if (!hasMatchingProject) return false;
-    }
-    return true;
-  }) ?? [];
+  const filteredMembers = useMemo(() => {
+    if (!state) return [];
+    return state.members.filter(m => {
+      if (memberSearch) {
+        const q = memberSearch.toLowerCase();
+        if (!m.name.toLowerCase().includes(q) && !m.email.toLowerCase().includes(q)) return false;
+      }
+      if (selectedSpace || selectedFolder) {
+        const hasMatching = Array.from(m.projectKeys).some(key => {
+          const proj = state.projects.find(p => p.key === key);
+          if (!proj) return false;
+          if (selectedSpace && proj.spaceName !== selectedSpace) return false;
+          if (selectedFolder && proj.folderName !== selectedFolder) return false;
+          return true;
+        });
+        if (!hasMatching) return false;
+      }
+      return true;
+    });
+  }, [state, memberSearch, selectedSpace, selectedFolder]);
+
+  const handleSelectSpace = (space: string) => {
+    setSelectedSpace(space);
+    setSelectedFolder(null);
+  };
+
+  const handleSelectFolder = (folder: string) => {
+    setSelectedFolder(folder);
+  };
+
+  const breadcrumbs = [
+    { label: "Spaces", onClick: () => { setSelectedSpace(null); setSelectedFolder(null); } },
+    ...(selectedSpace ? [{ label: selectedSpace, onClick: () => setSelectedFolder(null) }] : []),
+    ...(selectedFolder ? [{ label: selectedFolder, onClick: undefined }] : []),
+  ];
+
+  const showProjects = selectedSpace && selectedFolder;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -173,21 +202,73 @@ export default function DashboardPage() {
           <>
             <StatsGrid state={state} />
 
-            <ProjectCards
-              projects={filteredProjects}
-              tasks={state.tasks}
-              spaces={state.spaces}
-              availableFolders={availableFolders}
-              spaceFilter={spaceFilter}
-              folderFilter={folderFilter}
-              onSpaceFilter={setSpaceFilter}
-              onFolderFilter={setFolderFilter}
-            />
+            {/* Filters */}
+            <div className="flex gap-2 flex-wrap mb-4">
+              <select
+                value={selectedSpace ?? ""}
+                onChange={e => { setSelectedSpace(e.target.value || null); setSelectedFolder(null); }}
+                className="rounded-lg border bg-muted px-2.5 py-1.5 text-xs text-foreground"
+              >
+                <option value="">All spaces</option>
+                {state.spaces.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select
+                value={selectedFolder ?? ""}
+                onChange={e => setSelectedFolder(e.target.value || null)}
+                disabled={!selectedSpace}
+                className="rounded-lg border bg-muted px-2.5 py-1.5 text-xs text-foreground disabled:opacity-40"
+              >
+                <option value="">{selectedSpace ? "All categories" : "Select space first"}</option>
+                {availableFolders.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+
+            {/* Breadcrumb */}
+            {selectedSpace && (
+              <nav className="flex items-center gap-1.5 text-sm mb-4 flex-wrap">
+                {breadcrumbs.map((b, i) => (
+                  <span key={i} className="flex items-center gap-1.5">
+                    {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                    {b.onClick ? (
+                      <button onClick={b.onClick} className="text-primary hover:underline font-medium">
+                        {b.label}
+                      </button>
+                    ) : (
+                      <span className="text-muted-foreground font-medium">{b.label}</span>
+                    )}
+                  </span>
+                ))}
+              </nav>
+            )}
+
+            {/* Level 1: Spaces */}
+            {!selectedSpace && (
+              <SpaceCards projects={state.projects} onSelectSpace={handleSelectSpace} />
+            )}
+
+            {/* Level 2: Folders within space */}
+            {selectedSpace && !selectedFolder && (
+              <FolderCards projects={state.projects} spaceName={selectedSpace} onSelectFolder={handleSelectFolder} />
+            )}
+
+            {/* Level 3: Projects within folder */}
+            {showProjects && (
+              <ProjectCards
+                projects={filteredProjects}
+                tasks={state.tasks}
+                spaces={state.spaces}
+                availableFolders={availableFolders}
+                spaceFilter={selectedSpace}
+                folderFilter={selectedFolder}
+                onSpaceFilter={setSelectedSpace}
+                onFolderFilter={setSelectedFolder}
+              />
+            )}
 
             <TeamCapacity
               members={filteredMembers}
               tasks={state.tasks}
-              projects={state.projects}
+              projects={filteredProjects}
               memberSearch={memberSearch}
               onMemberSearch={setMemberSearch}
             />
