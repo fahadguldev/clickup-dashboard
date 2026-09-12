@@ -11,15 +11,9 @@ import { healthOf, initials } from "@/lib/compute";
 interface ProjectCardsProps {
   projects: Project[];
   tasks: Task[];
-  spaces: string[];
-  availableFolders: string[];
-  spaceFilter: string;
-  folderFilter: string;
-  onSpaceFilter: (v: string) => void;
-  onFolderFilter: (v: string) => void;
 }
 
-export function ProjectCards({ projects, tasks, spaces, availableFolders, spaceFilter, folderFilter, onSpaceFilter, onFolderFilter }: ProjectCardsProps) {
+export function ProjectCards({ projects, tasks }: ProjectCardsProps) {
   const [selected, setSelected] = useState<Project | null>(null);
 
   const selectedTasks = useMemo(() => {
@@ -48,31 +42,10 @@ export function ProjectCards({ projects, tasks, spaces, availableFolders, spaceF
   return (
     <>
       <section className="mb-6">
-        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            Projects
-            <span className="rounded-full bg-muted border px-2.5 py-0.5 text-[11px]">{projects.length}</span>
-          </h2>
-          <div className="flex gap-2 flex-wrap">
-            <select
-              value={spaceFilter}
-              onChange={e => { onSpaceFilter(e.target.value); onFolderFilter(""); }}
-              className="rounded-lg border bg-muted px-2.5 py-1.5 text-xs text-foreground"
-            >
-              <option value="">All spaces</option>
-              {spaces.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select
-              value={folderFilter}
-              onChange={e => onFolderFilter(e.target.value)}
-              disabled={!spaceFilter}
-              className="rounded-lg border bg-muted px-2.5 py-1.5 text-xs text-foreground disabled:opacity-40"
-            >
-              <option value="">{spaceFilter ? "All categories" : "Select space first"}</option>
-              {availableFolders.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-        </div>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+          Projects
+          <span className="rounded-full bg-muted border px-2.5 py-0.5 text-[11px]">{projects.length}</span>
+        </h2>
 
         {projects.length === 0 ? (
           <p className="text-sm text-muted-foreground">No projects match filters.</p>

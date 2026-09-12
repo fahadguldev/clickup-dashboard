@@ -126,9 +126,8 @@ export function TeamCapacity({ members, tasks, projects, memberSearch, onMemberS
           )}
 
           {(() => {
-            const todoTasks = memberTasks.filter(t => t.status?.type !== "closed" && t.status?.status === "to do");
-            const inProgressTasks = memberTasks.filter(t => t.status?.type !== "closed" && t.status?.status !== "to do");
-            const doneTasks = memberTasks.filter(t => t.status?.type === "closed");
+  const todoTasks = memberTasks.filter(t => t.status?.type !== "closed" && t.status?.status === "to do");
+  const inProgressTasks = memberTasks.filter(t => t.status?.type !== "closed" && t.status?.status !== "to do");
 
             return (
               <>

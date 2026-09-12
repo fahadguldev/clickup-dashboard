@@ -256,12 +256,6 @@ export default function DashboardPage() {
               <ProjectCards
                 projects={filteredProjects}
                 tasks={state.tasks}
-                spaces={state.spaces}
-                availableFolders={availableFolders}
-                spaceFilter={selectedSpace}
-                folderFilter={selectedFolder}
-                onSpaceFilter={setSelectedSpace}
-                onFolderFilter={setSelectedFolder}
               />
             )}
 
