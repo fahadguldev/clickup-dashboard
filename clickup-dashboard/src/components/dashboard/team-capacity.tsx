@@ -167,24 +167,6 @@ export function TeamCapacity({ members, tasks, projects, memberSearch, onMemberS
                     </div>
                   </div>
                 )}
-                {doneTasks.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
-                      Completed <span className="rounded-full bg-muted border px-2 py-0.5 text-[10px]">{doneTasks.length}</span>
-                    </h3>
-                    <div className="space-y-2">
-                      {doneTasks.map(t => (
-                        <div key={t.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors opacity-60">
-                          <span className="text-sm">✅</span>
-                          <div className="flex-1 min-w-0">
-                            <a href={t.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:text-primary hover:underline truncate block">{t.name}</a>
-                            <p className="text-xs text-muted-foreground mt-0.5">{t.list?.name || t.folder?.name || "—"}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </>
             );
           })()}
