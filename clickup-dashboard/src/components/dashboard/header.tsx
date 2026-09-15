@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, LogOut } from "lucide-react";
 
 interface DashboardHeaderProps {
   secondsLeft: number;
@@ -8,9 +8,15 @@ interface DashboardHeaderProps {
   statusText: string;
   onRefresh: () => void;
   refreshing: boolean;
+  userEmail?: string | null;
+  isAdmin?: boolean;
+  onSignOut?: () => void;
 }
 
-export function DashboardHeader({ secondsLeft, status, statusText, onRefresh, refreshing }: DashboardHeaderProps) {
+export function DashboardHeader({
+  secondsLeft, status, statusText, onRefresh, refreshing,
+  userEmail, isAdmin, onSignOut,
+}: DashboardHeaderProps) {
   return (
     <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-4 px-6 py-3 max-w-[1600px] mx-auto">
@@ -31,6 +37,21 @@ export function DashboardHeader({ secondsLeft, status, statusText, onRefresh, re
           <div className="rounded-full border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
             refresh in <span className="font-bold text-foreground">{secondsLeft}s</span>
           </div>
+          {userEmail && (
+            <div className="flex items-center gap-1.5 rounded-full border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">{userEmail}</span>
+              {isAdmin && <span className="rounded-full bg-primary/20 text-primary px-1.5 py-0.5 text-[10px] font-bold">ADMIN</span>}
+              {onSignOut && (
+                <button
+                  onClick={onSignOut}
+                  title="Sign out"
+                  className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          )}
           <button
             onClick={onRefresh}
             disabled={refreshing}

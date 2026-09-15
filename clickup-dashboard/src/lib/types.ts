@@ -53,6 +53,31 @@ export interface Member {
   projectKeys: Set<string>;
 }
 
+export interface TimeEntry {
+  id: string;
+  taskId: string;
+  taskName: string;
+  taskUrl: string | null;
+  memberId: number;
+  memberName: string;
+  memberEmail: string | null;
+  memberPic: string | null;
+  projectKey: string;
+  projectName: string;
+  folderName: string;
+  spaceName: string;
+  startTime: number;   // unix ms
+  endTime: number | null;
+  durationSeconds: number | null;
+}
+
+export interface TrackerMember {
+  id: number;
+  name: string;
+  email: string;
+  profilePicture: string | null;
+}
+
 export interface DashboardState {
   tasks: Task[];
   projects: Project[];

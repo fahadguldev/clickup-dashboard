@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog } from "@/components/ui/dialog";
-import { Member, Task, Project } from "@/lib/types";
+import { TimerButton } from "@/components/dashboard/timer-button";
+import { Member, Task, Project, TimeEntry } from "@/lib/types";
 import { healthOf, initials } from "@/lib/compute";
 
 interface TeamCapacityProps {
@@ -14,10 +15,23 @@ interface TeamCapacityProps {
   projects: Project[];
   memberSearch: string;
   onMemberSearch: (v: string) => void;
+  timeEntries?: TimeEntry[];
+  onStartTimer?: (task: Task) => void;
+  onStopTimer?: (entry: TimeEntry) => void;
 }
 
-export function TeamCapacity({ members, tasks, projects, memberSearch, onMemberSearch }: TeamCapacityProps) {
+export function TeamCapacity({
+  members, tasks, projects, memberSearch, onMemberSearch,
+  timeEntries = [], onStartTimer, onStopTimer,
+}: TeamCapacityProps) {
   const [selected, setSelected] = useState<Member | null>(null);
+  const runningByTask = useMemo(() => {
+    const map = new Map<string, TimeEntry>();
+    for (const e of timeEntries) {
+      if (e.endTime === null) map.set(e.taskId, e);
+    }
+    return map;
+  }, [timeEntries]);
 
   const memberTasks = useMemo(() => {
     if (!selected) return [];
@@ -144,6 +158,16 @@ export function TeamCapacity({ members, tasks, projects, memberSearch, onMemberS
                             <a href={t.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:text-primary hover:underline truncate block">{t.name}</a>
                             <p className="text-xs text-muted-foreground mt-0.5">{t.list?.name || t.folder?.name || "—"}</p>
                           </div>
+                          {onStartTimer && onStopTimer && (
+                            <TimerButton
+                              isRunning={runningByTask.has(t.id)}
+                              onToggle={() => {
+                                const running = runningByTask.get(t.id);
+                                if (running) onStopTimer(running);
+                                else onStartTimer(t);
+                              }}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -162,6 +186,16 @@ export function TeamCapacity({ members, tasks, projects, memberSearch, onMemberS
                             <a href={t.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:text-primary hover:underline truncate block">{t.name}</a>
                             <p className="text-xs text-muted-foreground mt-0.5">{t.list?.name || t.folder?.name || "—"} · {t.status?.status}</p>
                           </div>
+                          {onStartTimer && onStopTimer && (
+                            <TimerButton
+                              isRunning={runningByTask.has(t.id)}
+                              onToggle={() => {
+                                const running = runningByTask.get(t.id);
+                                if (running) onStopTimer(running);
+                                else onStartTimer(t);
+                              }}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>

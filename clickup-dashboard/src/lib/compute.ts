@@ -1,4 +1,4 @@
-import { Task, Project, Member, DashboardState, HealthStatus } from "./types";
+import { Task, Project, Member, DashboardState, HealthStatus, TimeEntry } from "./types";
 
 export function healthOf(status: HealthStatus): { txt: string; cls: string } {
   if (status === "critical") return { txt: "Critical", cls: "destructive" };
@@ -117,4 +117,136 @@ export function initials(name: string): string {
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// ── Time helpers ─────────────────────────────────────────────────────────────
+
+export function formatDuration(seconds: number | null): string {
+  if (!seconds || seconds <= 0) return "0m";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.round((seconds % 3600) / 60);
+  if (h === 0) return `${m}m`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+export function formatElapsed(startMs: number, nowMs: number): string {
+  const seconds = Math.max(0, Math.floor((nowMs - startMs) / 1000));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return h > 0
+    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+    : `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function startOfDay(d: Date): number {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r.getTime();
+}
+
+function startOfWeek(d: Date): number {
+  const r = new Date(d);
+  const day = r.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  r.setDate(r.getDate() - diff);
+  r.setHours(0, 0, 0, 0);
+  return r.getTime();
+}
+
+function startOfMonth(d: Date): number {
+  const r = new Date(d);
+  r.setDate(1);
+  r.setHours(0, 0, 0, 0);
+  return r.getTime();
+}
+
+export interface TimeSummary {
+  today: number;   // seconds
+  week: number;
+  month: number;
+  total: number;
+  activeCount: number;
+}
+
+export function timeSummary(entries: TimeEntry[], nowMs: number): TimeSummary {
+  const now = new Date(nowMs);
+  const dayStart = startOfDay(now);
+  const weekStart = startOfWeek(now);
+  const monthStart = startOfMonth(now);
+
+  let today = 0, week = 0, month = 0, total = 0, activeCount = 0;
+
+  for (const e of entries) {
+    const end = e.endTime ?? nowMs;
+    const dur = e.durationSeconds ?? Math.max(0, Math.floor((end - e.startTime) / 1000));
+
+    if (e.endTime === null) activeCount++;
+    total += dur;
+    if (e.startTime >= dayStart) today += dur;
+    if (e.startTime >= weekStart) week += dur;
+    if (e.startTime >= monthStart) month += dur;
+  }
+
+  return { today, week, month, total, activeCount };
+}
+
+export interface MemberTimeHours {
+  memberId: number;
+  memberName: string;
+  today: number;
+  week: number;
+  month: number;
+}
+
+export function hoursByMember(entries: TimeEntry[], nowMs: number): MemberTimeHours[] {
+  const now = new Date(nowMs);
+  const dayStart = startOfDay(now);
+  const weekStart = startOfWeek(now);
+  const monthStart = startOfMonth(now);
+  const map = new Map<number, MemberTimeHours>();
+
+  for (const e of entries) {
+    if (!map.has(e.memberId)) {
+      map.set(e.memberId, { memberId: e.memberId, memberName: e.memberName, today: 0, week: 0, month: 0 });
+    }
+    const m = map.get(e.memberId)!;
+    const end = e.endTime ?? nowMs;
+    const dur = e.durationSeconds ?? Math.max(0, Math.floor((end - e.startTime) / 1000));
+    if (e.startTime >= dayStart) m.today += dur;
+    if (e.startTime >= weekStart) m.week += dur;
+    if (e.startTime >= monthStart) m.month += dur;
+  }
+
+  return Array.from(map.values()).sort((a, b) => b.week - a.week);
+}
+
+export interface ProjectTimeHours {
+  projectKey: string;
+  projectName: string;
+  today: number;
+  week: number;
+  month: number;
+}
+
+export function hoursByProject(entries: TimeEntry[], nowMs: number): ProjectTimeHours[] {
+  const now = new Date(nowMs);
+  const dayStart = startOfDay(now);
+  const weekStart = startOfWeek(now);
+  const monthStart = startOfMonth(now);
+  const map = new Map<string, ProjectTimeHours>();
+
+  for (const e of entries) {
+    if (!map.has(e.projectKey)) {
+      map.set(e.projectKey, { projectKey: e.projectKey, projectName: e.projectName, today: 0, week: 0, month: 0 });
+    }
+    const p = map.get(e.projectKey)!;
+    const end = e.endTime ?? nowMs;
+    const dur = e.durationSeconds ?? Math.max(0, Math.floor((end - e.startTime) / 1000));
+    if (e.startTime >= dayStart) p.today += dur;
+    if (e.startTime >= weekStart) p.week += dur;
+    if (e.startTime >= monthStart) p.month += dur;
+  }
+
+  return Array.from(map.values()).sort((a, b) => b.week - a.week);
 }
